@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+.venv/
+.venv.old-*/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+uploads/*
+!uploads/.gitkeep
+*.log
+*_backup.zip

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}검색 · DB Photo Lab{% endblock %}
+{% block content %}
+<section class="panel"><h1>검색</h1>
+<form method="get" action="/search"><label>사용자, 게시물 설명, 해시태그<input name="q" value="{{ q }}" maxlength="100" required></label><button type="submit">검색</button></form></section>
+{% if q %}
+<section class="panel"><h2>사용자</h2><ul class="people">{% for person in people %}<li><a href="/users/{{ person.user_id|urlencode }}">{{ person.display_name }} · @{{ person.user_id }}</a></li>{% else %}<li>검색 결과가 없습니다.</li>{% endfor %}</ul></section>
+<section class="panel"><h2>해시태그</h2>{% for tag in tags %}<a href="/tags/{{ tag.name|urlencode }}">#{{ tag.name }}</a> {% else %}<p>검색 결과가 없습니다.</p>{% endfor %}</section>
+<h2>게시물</h2>{% include "_gallery.html" %}
+{% endif %}
+{% endblock %}

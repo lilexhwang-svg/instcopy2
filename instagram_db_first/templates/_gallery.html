@@ -1,0 +1,3 @@
+{% if posts %}<div class="gallery">
+{% for post in posts %}<a class="gallery-item" href="/posts/{{ post.post_id }}"><img src="{{ post.image_path }}" alt="{{ post.caption or '사진' }}" loading="lazy"><span>{{ post.caption }}</span></a>{% endfor %}
+</div>{% else %}<p class="muted">게시물이 없습니다.</p>{% endif %}

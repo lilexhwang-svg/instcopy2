@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}프로필 수정 · DB Photo Lab{% endblock %}
+{% block content %}
+<section class="panel"><h1>프로필 수정</h1>
+<form method="post" action="/settings/profile" enctype="multipart/form-data">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>닉네임<input name="display_name" value="{{ person.display_name }}" maxlength="60" required></label>
+  <label>소개글<textarea name="bio" maxlength="300" rows="3">{{ person.bio }}</textarea></label>
+  <label>프로필 사진 (5MB 이하)<input type="file" name="avatar" accept="image/jpeg,image/png,image/webp"></label>
+  <label><input type="checkbox" name="remove_picture" value="true">기존 사진 삭제 (새 사진을 선택하면 새 사진으로 교체)</label>
+  <button type="submit">저장</button>
+</form></section>
+{% endblock %}
