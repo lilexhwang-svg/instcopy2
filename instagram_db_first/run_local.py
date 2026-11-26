@@ -1,7 +1,6 @@
 """Prepare the configured MySQL database and start the local FastAPI server."""
 import getpass
 import os
-import re
 import sys
 import threading
 import webbrowser
@@ -12,6 +11,8 @@ import uvicorn
 from dotenv import load_dotenv, set_key
 
 from db import schema_files, schema_statements
+import db
+from local_config import ensure_env, verify_files
 
 BASE = Path(__file__).resolve().parent
 ENV = BASE / ".env"
@@ -20,10 +21,9 @@ SQL_FILES = schema_files()
 
 
 def settings():
-    load_dotenv(ENV)
-    host = os.getenv("DB_HOST", "").strip()
-    if not host:
-        raise ValueError(".env.example을 .env로 복사하고 DB_HOST에 MySQL 서버 주소를 입력해 주세요.")
+    ensure_env(ENV)
+    load_dotenv(ENV, encoding="utf-8-sig")
+    host = os.getenv("DB_HOST", "127.0.0.1").strip() or "127.0.0.1"
     return {
         "host": host,
         "port": int(os.getenv("DB_PORT", "3306")),
@@ -85,33 +85,13 @@ def statements(sql):
 
 
 def prepare_database():
+    verify_files()
     conn, conf = connect_or_ask()
     try:
         save_env(conf)
-        cur = conn.cursor()
-        try:
-            database_name = os.environ["DB_NAME"]
-            if not database_name or len(database_name) > 64 or "\x00" in database_name:
-                raise ValueError("DB_NAME에 유효한 MySQL 데이터베이스 이름을 입력해 주세요.")
-            quoted_name = "`" + database_name.replace("`", "``") + "`"
-            try:
-                cur.execute(f"USE {quoted_name}")
-            except mysql.connector.Error as exc:
-                if exc.errno != 1049:
-                    raise
-                cur.execute(f"CREATE DATABASE {quoted_name} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-                cur.execute(f"USE {quoted_name}")
-            for path in SQL_FILES:
-                for stmt in statements(path.read_text(encoding="utf-8")):
-                    if re.match(r"(?:CREATE\s+DATABASE|USE)\b", stmt, re.IGNORECASE):
-                        continue
-                    cur.execute(stmt)
-                    if cur.with_rows:
-                        cur.fetchall()
-                conn.commit()
-                print(f"  OK {path.relative_to(BASE)}")
-        finally:
-            cur.close()
+        db.select_database(conn)
+        db.apply_schema(conn)
+        print("  OK 데이터베이스·테이블·컬럼 준비 완료")
     finally:
         conn.close()
 
@@ -120,10 +100,11 @@ if __name__ == "__main__":
     print("[1/2] 데이터베이스 준비 (기존 데이터는 그대로 유지)")
     try:
         prepare_database()
-    except (ConnectionError, mysql.connector.Error, OSError, ValueError) as exc:
+    except (ConnectionError, mysql.connector.Error, OSError, ValueError, EOFError) as exc:
         sys.exit(f"[오류] {exc}")
     url = f"http://127.0.0.1:{PORT}"
     print(f"[2/2] 서버 시작: {url} (끄려면 Ctrl+C)")
-    threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+    if os.getenv("INSTCOPY_NO_BROWSER") != "1":
+        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
     sys.path.insert(0, str(BASE))
     uvicorn.run("app:app", host="127.0.0.1", port=PORT, reload=False)

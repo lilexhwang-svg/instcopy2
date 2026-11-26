@@ -5,6 +5,8 @@ from pathlib import Path
 import subprocess
 import sys
 
+from local_config import ensure_env, verify_files
+
 
 BASE = Path(__file__).resolve().parent
 
@@ -61,13 +63,21 @@ def main():
         print('[ERROR] Python 3.10 or newer is required.')
         return 1
     try:
+        verify_files()
+        ensure_env()
         python = ensure_environment()
         if args.prepare_only:
             print('Environment ready: ' + str(python), flush=True)
             return 0
-        print('Installing packages (first run may take a minute) ...', flush=True)
-        subprocess.run([str(python), '-m', 'pip', 'install', '--disable-pip-version-check',
-                        '-r', str(BASE / 'requirements.txt')], cwd=BASE, check=True)
+        probe = subprocess.run([str(python), '-c',
+            'import fastapi, uvicorn, jinja2, multipart, mysql.connector, dotenv, PIL, itsdangerous'],
+            capture_output=True, timeout=30)
+        if probe.returncode:
+            print('Installing packages (first run may take a minute) ...', flush=True)
+            subprocess.run([str(python), '-m', 'pip', 'install', '--disable-pip-version-check',
+                            '-r', str(BASE / 'requirements.txt')], cwd=BASE, check=True)
+        else:
+            print('Required packages are already installed.', flush=True)
         return subprocess.run([str(python), str(BASE / 'run_local.py')], cwd=BASE).returncode
     except (OSError, RuntimeError, subprocess.CalledProcessError) as exc:
         print('[ERROR] ' + str(exc), flush=True)

@@ -20,6 +20,7 @@ from starlette.concurrency import run_in_threadpool
 import db
 import features
 from security import check_password, make_password_hash
+from local_config import verify_files
 
 BASE = Path(__file__).resolve().parent
 load_dotenv(BASE / ".env")
@@ -31,6 +32,9 @@ Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
 @asynccontextmanager
 async def lifespan(app):
+    verify_files()
+    for name in templates.env.list_templates():
+        templates.env.get_template(name)
     await run_in_threadpool(db.initialize_schema)
     yield
 

@@ -6,10 +6,17 @@ set "PYTHONIOENCODING=utf-8"
 title instcopy server
 cd /d "%~dp0instagram_db_first" || goto :fail
 
-if not defined INSTCOPY_PYTHON goto :find_python
+if not defined INSTCOPY_PYTHON goto :try_existing
 "%INSTCOPY_PYTHON%" -c "import sys, venv; raise SystemExit(sys.version_info < (3,10))" >nul 2>&1
 if errorlevel 1 goto :invalid_python
 "%INSTCOPY_PYTHON%" bootstrap_env.py %*
+if errorlevel 1 goto :fail
+exit /b 0
+
+:try_existing
+".venv\Scripts\python.exe" -c "import sys, venv; raise SystemExit(sys.version_info < (3,10))" >nul 2>&1
+if errorlevel 1 goto :find_python
+".venv\Scripts\python.exe" bootstrap_env.py %*
 if errorlevel 1 goto :fail
 exit /b 0
 
